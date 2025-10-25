@@ -168,7 +168,7 @@ public class ProtoBufSchemaUtils {
           Preconditions.checkNotNull(timeUnit, "Time unit cannot be null");
           // TODO: Switch to new format after releasing 0.11.0
           //       "EPOCH|" + timeUnit.name()
-          String format = "1:" + timeUnit.name() + ":EPOCH";
+          String format = "EPOCH|" + timeUnit.name();
           String granularity = "1:" + timeUnit.name();
           pinotSchema.addField(new DateTimeFieldSpec(name, dataType, format, granularity));
           break;
