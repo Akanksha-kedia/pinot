@@ -18,7 +18,6 @@
  */
 package org.apache.pinot.common.auth.vault;
 
-/* START GENAI@CLINE */
 /**
  * Configuration class for Vault authentication
  */
@@ -82,4 +81,3 @@ public class VaultConfig {
     this.readTimeoutSeconds = readTimeoutSeconds; 
   }
 }
-/* END GENAI@CLINE */

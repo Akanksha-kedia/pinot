@@ -59,6 +59,21 @@ public class StaticTokenAuthProvider implements AuthProvider {
     return _taskToken;
   }
 
+  @Override
+  public void init() {
+    // Static token provider doesn't need initialization
+  }
+
+  @Override
+  public String getToken() {
+    return _taskToken;
+  }
+
+  @Override
+  public void close() {
+    // Static token provider doesn't need cleanup
+  }
+
   private static String makeToken(String prefix, String token) {
     if (token.startsWith(prefix)) {
       return token;

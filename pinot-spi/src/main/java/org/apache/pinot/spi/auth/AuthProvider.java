@@ -18,6 +18,8 @@
  */
 package org.apache.pinot.spi.auth;
 
+import java.util.Map;
+
 /**
  * Authentication provider interface for Pinot components
  */
@@ -33,6 +35,18 @@ public interface AuthProvider {
    * @return authentication token
    */
   String getToken();
+  
+  /**
+   * Get task token for job authentication  
+   * @return task token
+   */
+  String getTaskToken();
+  
+  /**
+   * Get request headers for HTTP authentication
+   * @return map of header name to header value
+   */
+  Map<String, Object> getRequestHeaders();
   
   /**
    * Close and cleanup resources
