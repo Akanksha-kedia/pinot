@@ -274,7 +274,7 @@ public class ImplicitHybridTableRouteInfo implements TableRouteInfo {
       Map<ServerInstance, SegmentsToQuery> routingTable, BrokerRequest brokerRequest, long requestId, String brokerId,
       boolean preferTls) {
     ServerInstance.RoutingType routingType =
-        preferTls ? ServerInstance.RoutingType.NETTY_TLS : ServerInstance.RoutingType.NETTY;
+        preferTls ? ServerInstance.RoutingType.PREFER_NETTY_TLS : ServerInstance.RoutingType.NETTY;
     Map<ServerRoutingInstance, InstanceRequest> requestMap = new HashMap<>();
     for (Map.Entry<ServerInstance, SegmentsToQuery> entry : routingTable.entrySet()) {
       ServerRoutingInstance serverRoutingInstance = entry.getKey().toServerRoutingInstance(tableType, routingType);

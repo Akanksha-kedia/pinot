@@ -40,7 +40,16 @@ public final class ServerInstance {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerInstance.class);
 
   public enum RoutingType {
-    NETTY, GRPC, NETTY_TLS
+    NETTY,
+    GRPC,
+    /** Hard-require TLS; throws if the server has no TLS port configured. */
+    NETTY_TLS,
+    /**
+     * Use TLS when the server advertises a TLS port, fall back to plain Netty otherwise.
+     * Preserves the semantics of the deprecated {@code toServerRoutingInstance(TableType, boolean preferNettyTls)}
+     * overload and is safe to use during rolling upgrades when not all servers have TLS enabled yet.
+     */
+    PREFER_NETTY_TLS
   }
 
   private static final char HOSTNAME_PORT_DELIMITER = '_';
@@ -188,6 +197,12 @@ public final class ServerInstance {
       case NETTY_TLS:
         Preconditions.checkState(_nettyTlsPort > 0, "Netty TLS port is not configured for server: %s", _instanceId);
         return new ServerRoutingInstance(_instanceId, _hostname, _nettyTlsPort, tableType, true);
+      case PREFER_NETTY_TLS:
+        if (_nettyTlsPort > 0) {
+          return new ServerRoutingInstance(_instanceId, _hostname, _nettyTlsPort, tableType, true);
+        } else {
+          return new ServerRoutingInstance(_instanceId, _hostname, _port, tableType);
+        }
       default:
         throw new IllegalStateException("Unsupported routing type: " + routingType);
     }
