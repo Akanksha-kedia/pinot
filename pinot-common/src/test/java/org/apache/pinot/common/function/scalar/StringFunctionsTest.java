@@ -638,5 +638,12 @@ public class StringFunctionsTest {
 
     // length clamped: cannot delete past end of string
     assertEquals(StringFunctions.overlay("abc", "Z", 2, 100), "aZ");
+
+    // start <= 0: clamped to position 1 (beginning of string)
+    assertEquals(StringFunctions.overlay("abcdef", "XY", 0, 2), "XYcdef");
+    assertEquals(StringFunctions.overlay("abcdef", "XY", -3, 2), "XYcdef");
+
+    // negative length: clamped to 0 (pure insertion)
+    assertEquals(StringFunctions.overlay("abcdef", "XY", 3, -1), "abXYcdef");
   }
 }
