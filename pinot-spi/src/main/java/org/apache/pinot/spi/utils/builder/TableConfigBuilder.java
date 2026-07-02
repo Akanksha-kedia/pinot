@@ -49,6 +49,7 @@ import org.apache.pinot.spi.config.table.UpsertConfig;
 import org.apache.pinot.spi.config.table.assignment.InstanceAssignmentConfig;
 import org.apache.pinot.spi.config.table.assignment.InstancePartitionsType;
 import org.apache.pinot.spi.config.table.assignment.SegmentAssignmentConfig;
+import org.apache.pinot.spi.config.table.ingestion.BatchIngestionConfig;
 import org.apache.pinot.spi.config.table.ingestion.IngestionConfig;
 import org.apache.pinot.spi.config.table.sampler.TableSamplerConfig;
 
@@ -223,6 +224,7 @@ public class TableConfigBuilder {
   /**
    * @deprecated Use {@code segmentIngestionType} from {@link IngestionConfig#getBatchIngestionConfig()}
    */
+  @Deprecated
   public TableConfigBuilder setSegmentPushType(String segmentPushType) {
     if (REFRESH_SEGMENT_PUSH_TYPE.equalsIgnoreCase(segmentPushType)) {
       _segmentPushType = REFRESH_SEGMENT_PUSH_TYPE;
@@ -235,6 +237,7 @@ public class TableConfigBuilder {
   /**
    * @deprecated Use {@code segmentIngestionFrequency} from {@link IngestionConfig#getBatchIngestionConfig()}
    */
+  @Deprecated
   public TableConfigBuilder setSegmentPushFrequency(String segmentPushFrequency) {
     _segmentPushFrequency = segmentPushFrequency;
     return this;
@@ -565,6 +568,19 @@ public class TableConfigBuilder {
 
     if (_customConfig == null) {
       _customConfig = new TableCustomConfig(null);
+    }
+
+    // Forward deprecated push type / frequency to BatchIngestionConfig (the canonical location).
+    // Only inject when no explicit IngestionConfig was supplied via setIngestionConfig() — callers
+    // that have already adopted the new API should not have their objects mutated by deprecated
+    // setters.  Only propagate non-default values to avoid creating a spurious BatchIngestionConfig
+    // on tables (e.g. REALTIME) that never called these deprecated setters.
+    boolean hasNonDefaultPushType = REFRESH_SEGMENT_PUSH_TYPE.equalsIgnoreCase(_segmentPushType);
+    boolean hasNonNullFrequency = _segmentPushFrequency != null;
+    if (_ingestionConfig == null && (hasNonDefaultPushType || hasNonNullFrequency)) {
+      _ingestionConfig = new IngestionConfig();
+      _ingestionConfig.setBatchIngestionConfig(new BatchIngestionConfig(null,
+          hasNonDefaultPushType ? _segmentPushType : null, _segmentPushFrequency));
     }
 
     TableConfig tableConfig =

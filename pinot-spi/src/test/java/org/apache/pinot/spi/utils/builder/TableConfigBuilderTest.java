@@ -21,6 +21,8 @@ package org.apache.pinot.spi.utils.builder;
 
 import org.apache.pinot.spi.config.table.TableConfig;
 import org.apache.pinot.spi.config.table.TableType;
+import org.apache.pinot.spi.config.table.ingestion.BatchIngestionConfig;
+import org.apache.pinot.spi.config.table.ingestion.IngestionConfig;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -41,5 +43,73 @@ public class TableConfigBuilderTest {
         .setSkipSegmentPreprocess(true).build();
     Assert.assertTrue(tableconfig.getIndexingConfig().isSkipSegmentPreprocess(),
         "skipSegmentPreprocess will be true");
+  }
+
+  @Test
+  public void testDeprecatedSetSegmentPushTypeDefaultAppendDoesNotCreateBatchIngestionConfig() {
+    // Default APPEND push type should NOT create a BatchIngestionConfig (avoid spurious objects on REALTIME tables)
+    TableConfig tableConfig = new TableConfigBuilder(TableType.OFFLINE)
+        .setTableName(TABLE_NAME)
+        .setSegmentPushType("APPEND")
+        .build();
+    Assert.assertNull(tableConfig.getIngestionConfig(),
+        "Default APPEND push type should not create an IngestionConfig");
+  }
+
+  @Test
+  public void testDeprecatedSetSegmentPushTypeRefreshForwardsToBatchIngestionConfig() {
+    // REFRESH push type must be forwarded to BatchIngestionConfig
+    TableConfig tableConfig = new TableConfigBuilder(TableType.OFFLINE)
+        .setTableName(TABLE_NAME)
+        .setSegmentPushType("REFRESH")
+        .build();
+    IngestionConfig ingestionConfig = tableConfig.getIngestionConfig();
+    Assert.assertNotNull(ingestionConfig, "IngestionConfig should be created for REFRESH push type");
+    BatchIngestionConfig batchIngestionConfig = ingestionConfig.getBatchIngestionConfig();
+    Assert.assertNotNull(batchIngestionConfig, "BatchIngestionConfig should be created for REFRESH push type");
+    Assert.assertEquals(batchIngestionConfig.getSegmentIngestionType(), "REFRESH");
+    // Legacy path must also be populated for backward compat
+    Assert.assertEquals(tableConfig.getValidationConfig().getSegmentPushType(), "REFRESH");
+  }
+
+  @Test
+  public void testDeprecatedSetSegmentPushFrequencyForwardsToBatchIngestionConfig() {
+    // Non-null frequency must be forwarded to BatchIngestionConfig
+    TableConfig tableConfig = new TableConfigBuilder(TableType.OFFLINE)
+        .setTableName(TABLE_NAME)
+        .setSegmentPushFrequency("DAILY")
+        .build();
+    IngestionConfig ingestionConfig = tableConfig.getIngestionConfig();
+    Assert.assertNotNull(ingestionConfig, "IngestionConfig should be created when frequency is set");
+    BatchIngestionConfig batchIngestionConfig = ingestionConfig.getBatchIngestionConfig();
+    Assert.assertNotNull(batchIngestionConfig, "BatchIngestionConfig should be created when frequency is set");
+    Assert.assertEquals(batchIngestionConfig.getSegmentIngestionFrequency(), "DAILY");
+    // Legacy path must also be populated for backward compat
+    Assert.assertEquals(tableConfig.getValidationConfig().getSegmentPushFrequency(), "DAILY");
+  }
+
+  @Test
+  public void testDeprecatedSettersDoNotMutateExplicitIngestionConfig() {
+    // When setIngestionConfig() has been called, deprecated setters must not touch the supplied object at all.
+    BatchIngestionConfig explicitBatch = new BatchIngestionConfig(null, "APPEND", "HOURLY");
+    IngestionConfig explicitIngestion = new IngestionConfig();
+    explicitIngestion.setBatchIngestionConfig(explicitBatch);
+
+    TableConfig tableConfig = new TableConfigBuilder(TableType.OFFLINE)
+        .setTableName(TABLE_NAME)
+        .setSegmentPushType("REFRESH")
+        .setSegmentPushFrequency("DAILY")
+        .setIngestionConfig(explicitIngestion)
+        .build();
+    BatchIngestionConfig batchIngestionConfig = tableConfig.getIngestionConfig().getBatchIngestionConfig();
+    Assert.assertEquals(batchIngestionConfig.getSegmentIngestionType(), "APPEND",
+        "Explicit ingestion type should not be overwritten by deprecated setter");
+    Assert.assertEquals(batchIngestionConfig.getSegmentIngestionFrequency(), "HOURLY",
+        "Explicit ingestion frequency should not be overwritten by deprecated setter");
+    // Confirm the caller's original object was NOT mutated
+    Assert.assertSame(tableConfig.getIngestionConfig(), explicitIngestion,
+        "build() must not replace the caller-supplied IngestionConfig");
+    Assert.assertSame(tableConfig.getIngestionConfig().getBatchIngestionConfig(), explicitBatch,
+        "build() must not replace the caller-supplied BatchIngestionConfig");
   }
 }
