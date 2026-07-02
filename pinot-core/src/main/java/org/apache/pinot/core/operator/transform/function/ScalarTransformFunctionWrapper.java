@@ -28,13 +28,13 @@ import org.apache.pinot.common.function.FunctionInfo;
 import org.apache.pinot.common.function.FunctionUtils;
 import org.apache.pinot.common.function.QueryFunctionInvoker;
 import org.apache.pinot.common.utils.DataSchema.ColumnDataType;
-import org.apache.pinot.common.utils.PinotDataType;
 import org.apache.pinot.core.operator.ColumnContext;
 import org.apache.pinot.core.operator.blocks.ValueBlock;
 import org.apache.pinot.core.operator.transform.TransformResultMetadata;
 import org.apache.pinot.spi.data.FieldSpec.DataType;
 import org.apache.pinot.spi.utils.ByteArray;
 import org.apache.pinot.spi.utils.CommonConstants.NullValuePlaceHolder;
+import org.apache.pinot.spi.utils.PinotDataType;
 
 
 /**
@@ -103,7 +103,7 @@ public class ScalarTransformFunctionWrapper extends BaseTransformFunction {
             break;
           case INT:
             _scalarArguments[i] =
-                parameterTypes[i].convert(literalTransformFunction.getIntLiteral(), PinotDataType.INTEGER);
+                parameterTypes[i].convert(literalTransformFunction.getIntLiteral(), PinotDataType.INT);
             break;
           case LONG:
             _scalarArguments[i] =
@@ -383,7 +383,7 @@ public class ScalarTransformFunctionWrapper extends BaseTransformFunction {
       PinotDataType parameterType = parameterTypes[_nonLiteralIndices[i]];
       TransformFunction transformFunction = _nonLiteralFunctions[i];
       switch (parameterType) {
-        case INTEGER:
+        case INT:
           _nonLiteralValues[i] = ArrayUtils.toObject(transformFunction.transformToIntValuesSV(valueBlock));
           break;
         case LONG:

@@ -27,7 +27,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +158,8 @@ public class TableIndexingTest {
 
   protected void createSchemas() {
     for (DataType type : DataType.values()) {
-      if (type == DataType.UNKNOWN || type == DataType.LIST || type == DataType.MAP || type == DataType.STRUCT) {
+      if (type == DataType.UNKNOWN || type == DataType.LIST || type == DataType.MAP || type == DataType.STRUCT
+          || type == DataType.OPEN_STRUCT) {
         continue;
       }
 
@@ -426,8 +426,8 @@ public class TableIndexingTest {
             idxCfg.setStarTreeIndexConfigs(new ArrayList<>());
           }
           StarTreeIndexConfig stIdxCfg =
-              new StarTreeIndexConfig(List.of(COLUMN_NAME), Collections.emptyList(), List.of("SUM__col"),
-                  Collections.emptyList(), 1);
+              new StarTreeIndexConfig(List.of(COLUMN_NAME), List.of(), List.of("SUM__col"),
+                  List.of(), 1);
           idxCfg.getStarTreeIndexConfigs().add(stIdxCfg);
 
           break;

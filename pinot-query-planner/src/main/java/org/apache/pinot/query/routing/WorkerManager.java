@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -112,7 +111,7 @@ public class WorkerManager {
     // worker instance with identical server/mailbox port number.
     DispatchablePlanMetadata metadata = context.getDispatchablePlanMetadataMap().get(0);
     metadata.setWorkerIdToServerInstanceMap(
-        Collections.singletonMap(0, new QueryServerInstance(_instanceId, _hostName, _port, _port)));
+        Map.of(0, new QueryServerInstance(_instanceId, _hostName, _port, _port)));
 
     // Two-pass assignment: leaf stages must be assigned first so that the candidate server information
     // (_nonLookupTables or _leafServerInstances) is fully populated before intermediate stages use it.
@@ -494,7 +493,7 @@ public class WorkerManager {
       String partitionKey = tableOptions.get(PinotHintOptions.TableHintOptions.PARTITION_KEY);
       if (partitionKey != null) {
         assignWorkersToPartitionedLeafFragment(metadata, context, partitionKey, tableOptions);
-        addLeafServersToContext(metadata, context);
+        updateContextForLeafStage(metadata, context);
         return;
       }
     }
@@ -504,14 +503,22 @@ public class WorkerManager {
     } else {
       assignWorkersToNonPartitionedLeafFragment(fragment, metadata, context);
     }
-    addLeafServersToContext(metadata, context);
+    updateContextForLeafStage(metadata, context);
   }
 
-  private void addLeafServersToContext(DispatchablePlanMetadata metadata, DispatchablePlanContext context) {
+  private void updateContextForLeafStage(DispatchablePlanMetadata metadata, DispatchablePlanContext context) {
+    filterLeafStageSegments(context, metadata);
     if (context.isUseLeafServerForIntermediateStage()) {
       Map<Integer, QueryServerInstance> workerIdToServerInstanceMap = metadata.getWorkerIdToServerInstanceMap();
       assert workerIdToServerInstanceMap != null;
       context.getLeafServerInstances().addAll(workerIdToServerInstanceMap.values());
+    }
+    // Track empty leaf stage for short-circuit detection.
+    // The replicated path returns early above and is excluded: replicated leaves
+    // broadcast segments to all servers rather than populating workerIdToServerInstanceMap.
+    context.recordLeafStageAssigned();
+    if (metadata.getWorkerIdToServerInstanceMap().isEmpty()) {
+      context.recordLeafStageEmpty();
     }
   }
 
@@ -728,6 +735,15 @@ public class WorkerManager {
 
     // TODO: Support unavailable segments and optional segments for replicated leaf stage
     metadata.setReplicatedSegments(segmentsMap);
+    filterReplicatedLeafStageSegments(context, metadata);
+  }
+
+  /** Extension point to filter the non-replicated leaf-stage per-worker segment assignment; no-op by default. */
+  protected void filterLeafStageSegments(DispatchablePlanContext context, DispatchablePlanMetadata metadata) {
+  }
+
+  /** Extension point to filter the replicated leaf-stage segments; no-op by default. */
+  protected void filterReplicatedLeafStageSegments(DispatchablePlanContext context, DispatchablePlanMetadata metadata) {
   }
 
   /**
